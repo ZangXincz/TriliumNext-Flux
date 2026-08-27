@@ -1,0 +1,28 @@
+{
+	"version": 1,
+	"enabled": true,
+	"lang": "zh",
+	"features": {
+		"today": true,
+		"projects": true,
+		"onHold": true,
+		"cycling": true,
+		"future": true,
+		"dk": true,
+		"tx": true,
+		"inbox": true
+	},
+	"inbox": {
+		"titles": ["inbox", "收集箱"]
+	},
+	"projectRoot": {
+		"titles": ["Projects"]
+	},
+	"dk": {
+		"tags": ["dk", "checkin", "habit"]
+	},
+	"tx": {
+		"tags": ["tx", "timer", "pomodoro"],
+		"defaultRest": 5
+	}
+}

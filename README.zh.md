@@ -39,7 +39,7 @@ TriliumNext Flux 是一个运行在 [TriliumNext](https://github.com/TriliumNext
 1. 如之前未开启过`后端脚本执行`，需要在`设置`->`安全` 中开启
 
 2. **导入插件压缩包**：在 Trilium root目录，鼠标右键，导入到笔记，选择zip包，取消勾选安全导入
-   ![alt text](./docs/impoimportzipenrtzip.png)
+   ![alt text](./docs/importzip.png)
 
    导入图示
    ![alt text](./docs/importgraphic.png)

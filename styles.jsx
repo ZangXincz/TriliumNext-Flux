@@ -402,6 +402,7 @@ export const TASK_STYLES = `
        ============================================================ */
     .th-shell {
         position: relative;
+        min-height: 50px;
     }
     .th-gear {
         position: absolute;

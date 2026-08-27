@@ -35,6 +35,7 @@ TriliumNext Flux 是一个运行在 [TriliumNext](https://github.com/TriliumNext
 ### 前提
 
 - 已安装 **TriliumNext**（0.105.0版及以上，低于此版本可能也支持，只是我没有测试过）
+- 从 [Releases 下载页](https://github.com/ZangXincz/TriliumNext-Flux/releases) 下载最新插件 zip 包
 
 ### 导入步骤
 

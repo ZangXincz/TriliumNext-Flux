@@ -35,6 +35,7 @@ TriliumNext Flux is a Render plugin that runs in [TriliumNext](https://github.co
 ### Prerequisites
 
 - **TriliumNext** installed (version 0.105.0 or above; older versions may also work but have not been tested)
+- Download the latest plugin zip from the [Releases page](https://github.com/ZangXincz/TriliumNext-Flux/releases)
 
 ### Import steps
 

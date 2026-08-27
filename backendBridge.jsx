@@ -598,7 +598,9 @@ export async function toggleDkDay(noteId, cbIndex, dateStr, dkTags) {
         function parseRec(text) {
             // 注意：([^（]+?) 必须至少一个字符，且"（进度N/M / 相当于是N/M / 周进度N/M）"为必选，
             // 否则非贪婪 [^（]*? 会匹配空串，导致 days 恒为空、打卡永远被覆盖
-            const m = text.match(/(\d{8})~(\d{8})\s+dk(\d+)周：([^（]+?)（(?:相当于是|进度|周进度)\d+\/\d+）/);
+            // 进度数允许 NaN：兼容旧 bug 写入的 "周进度1/NaN" 脏数据，使记录能被解析保留，
+            // 下次打卡重建时会用正确进度重写（自愈）
+            const m = text.match(/(\d{8})~(\d{8})\s+dk(\d+)周：([^（]+?)（(?:相当于是|进度|周进度)(?:\d+|NaN)\/(?:\d+|NaN)）/);
             if (!m) return null;
             const dayCounts = [];
             for (const item of m[4].split(/[，,、\s]+/).filter(Boolean)) {
@@ -625,15 +627,19 @@ export async function toggleDkDay(noteId, cbIndex, dateStr, dkTags) {
         //    N=每周目标天数, M=每天打卡次数（缺省 1）；周目标总次数 = N × M
         const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const dkTagList = (dkTags && dkTags.length > 0) ? dkTags : ['dk'];
-        const dkTagRe = new RegExp('#' + dkTagList.map(escRe).join('|') + ':(\\d+)(?::(\\d+))?', 'i');
+        // 别名列表必须用非捕获组 (?:...) 整体包裹，否则多别名时正则变成
+        // "#dk|checkin|habit:(\d+)"，'checkin' 分支会匹配任意 "checkin" 文本，
+        // 捕获组为空 → parseInt(undefined) = NaN → 记录里出现 "周进度1/NaN"
+        const dkTagRe = new RegExp('#(?:' + dkTagList.map(escRe).join('|') + '):(\\d+)(?::(\\d+))?', 'i');
         function parseTarget(taskLi) {
             const ui = taskLi.toLowerCase().indexOf('<ul');
             const taskPart = ui >= 0 ? taskLi.slice(0, ui) : taskLi;
             const text = taskPart.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
             const m = text.match(dkTagRe);
             if (!m) return { dkDays: 0, dkPerDay: 1 };
-            const dkDays = parseInt(m[1], 10);
-            const dkPerDay = m[2] ? parseInt(m[2], 10) : 1;
+            // 防御：parseInt 结果兜底，避免异常值污染记录文本
+            const dkDays = parseInt(m[1], 10) || 0;
+            const dkPerDay = m[2] ? (parseInt(m[2], 10) || 1) : 1;
             return { dkDays, dkPerDay };
         }
         const { dkDays, dkPerDay } = parseTarget(liContent);

@@ -39,7 +39,9 @@ function nextAllUls(el) {
 // 否则非贪婪 [^（]*? 匹配空串 → days 恒为空 → 前端永远 0/目标
 // 返回 days: [{ dow, count, target }]（每天打卡次数 + 当天目标）
 function parseDkRecord(text) {
-    const m = text.match(/(\d{8})~(\d{8})\s+dk(\d+)周：([^（]+?)（(?:相当于是|进度|周进度)(\d+)\/(\d+)）/);
+    // 进度数允许 NaN：兼容历史脏数据 "周进度1/NaN"（后端多别名正则 bug 写入），
+    // 否则该条记录解析失败导致 UI 不显示；NaN 会被 parseInt||0 兜底为 0
+    const m = text.match(/(\d{8})~(\d{8})\s+dk(\d+)周：([^（]+?)（(?:相当于是|进度|周进度)(\d+|NaN)\/(\d+|NaN)）/);
     if (!m) return null;
     const dayCounts = [];
     for (const item of m[4].split(/[，,、\s]+/).filter(Boolean)) {

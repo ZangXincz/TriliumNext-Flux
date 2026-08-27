@@ -89,6 +89,7 @@ const ZH = {
     'settings.helpTitle': '使用指南（#标记）',
     'settings.saveOk': '设置已保存',
     'settings.noConfigNote': '未找到配置笔记。请在宿主笔记上添加关系 configNote 指向一份 JSON/代码 配置笔记。',
+    'settings.wrongType': '配置笔记是 {type} 类型，必须是 json 或 code 类型才能保存配置。请在宿主笔记上添加 ~configNote 关系，指向一个 json/code 类型的配置笔记。',
 
     'tab.general': '基础设置',
     'tab.tasks': '任务',
@@ -125,6 +126,7 @@ const ZH = {
     'set.fCyclingDesc': 'state=Cycling-Phase 的项目',
     'set.projectRoot': '项目上级目录',
     'set.projectRootDesc': '逗号分隔。面板只扫描这些目录下的内容，留空则扫描全部笔记',
+    'set.projectRootPlaceholder': '留空 = 全局获取，例如 Projects',
 
     // 打卡
     'set.fDk': '打卡功能',
@@ -248,6 +250,7 @@ const EN = {
     'settings.helpTitle': 'Usage Guide (#tags)',
     'settings.saveOk': 'Settings saved',
     'settings.noConfigNote': 'Config note not found. Add a "configNote" relation on the host note pointing to a JSON/code config note.',
+    'settings.wrongType': 'Config note is of type {type}; it must be json or code to save settings. Add a ~configNote relation on the host note pointing to a json/code config note.',
 
     'tab.general': 'General',
     'tab.tasks': 'Tasks',
@@ -281,6 +284,7 @@ const EN = {
     'set.fCyclingDesc': 'Projects with state=Cycling-Phase',
     'set.projectRoot': 'Project root',
     'set.projectRootDesc': 'Comma-separated. Panel only scans these folders; empty = scan all notes',
+    'set.projectRootPlaceholder': 'Empty = all notes, e.g. Projects',
 
     'set.fDk': 'Check-in',
     'set.fDkDesc': 'Show check-in cards (#dk tags)',

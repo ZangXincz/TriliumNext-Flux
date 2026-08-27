@@ -117,20 +117,16 @@ export async function saveJsonConfig(hostNoteId, patch) {
 // features: 功能开关。关闭的功能在数据层直接跳过，降低 getContent 与解析开销：
 //   - onHold=false：暂停项目内容只用于卡片进度、任务不进全局视图 → 直接跳过（不读内容、不返回）
 //   其余开关对应模块的任务仍参与全局分组，无法跳过内容读取，仅做 UI 裁剪
-// 收集箱：root 下标题匹配 inboxTitles 的笔记及其子树（任务单独成组）
-// 项目根：root 下标题匹配 projectRootTitles 的目录；非空时只扫描这些目录 + 收集箱
+// 任务/打卡/提醒：全树所有 text 笔记按标签解析（不限定项目文件夹）
+// 收集箱：标题匹配 inboxTitles 的笔记（任意层级）及其子树（任务单独成组）
+// 项目根：标题匹配 projectRootTitles 的目录（任意层级）；仅约束「项目卡片」（带 state 标签的笔记）的范围，
+//         未配置项目根时全树带 state 的笔记都算项目
+// 返回 { notes, diag }：notes 为任务数据；diag 含匹配诊断（前端据此提示"配置的名称未匹配到任何目录"）
 export async function loadData(cfg, features) {
     return runOnBackend((cfg, features) => {
 
         const root = api.getNote('root'); // Trilium 根笔记 noteId 固定为 'root'
         const rootId = root.noteId;
-
-        // root 的直接子级
-        const rootChildren = api.sql.getRows(`
-            SELECT b.noteId, n.title FROM branches b
-            JOIN notes n ON n.noteId = b.noteId
-            WHERE b.parentNoteId = ? AND b.isDeleted = 0 AND n.isDeleted = 0
-        `, [rootId]);
 
         // 标题正则（大小写不敏感），供收集箱 / 项目根匹配
         const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -139,8 +135,29 @@ export async function loadData(cfg, features) {
         const inRe = inTitles.length > 0 ? new RegExp('^(?:' + inTitles.map(escRe).join('|') + ')$', 'i') : null;
         const projRe = projTitles.length > 0 ? new RegExp('^(?:' + projTitles.map(escRe).join('|') + ')$', 'i') : null;
 
-        const inboxRootIds = inRe ? rootChildren.filter(c => inRe.test(String(c.title || '').trim())).map(c => c.noteId) : [];
-        const projectRootIds = projRe ? rootChildren.filter(c => projRe.test(String(c.title || '').trim())).map(c => c.noteId) : [];
+        // 整棵树全部节点（标题匹配用：收集箱 / 项目根可位于任意层级，不限定 root 直接子级）
+        const allNodes = api.sql.getRows(`
+            WITH RECURSIVE tree(noteId) AS (
+                SELECT noteId FROM branches
+                WHERE parentNoteId = ? AND isDeleted = 0
+                UNION
+                SELECT b.noteId FROM branches b JOIN tree t ON b.parentNoteId = t.noteId
+                WHERE b.isDeleted = 0
+            )
+            SELECT DISTINCT t.noteId, n.title, n.type FROM tree t
+            JOIN notes n ON n.noteId = t.noteId
+            WHERE n.isDeleted = 0
+        `, [rootId]);
+
+        // 项目根：整棵树任意深度匹配标题（项目目录可放在任意层级）
+        const projectRootIds = projRe ? allNodes
+            .filter(r => projRe.test(String(r.title || '').trim()))
+            .map(r => r.noteId) : [];
+
+        // 收集箱根：整棵树任意深度匹配标题
+        const inboxRootIds = inRe ? allNodes
+            .filter(r => inRe.test(String(r.title || '').trim()))
+            .map(r => r.noteId) : [];
 
         // 收集箱子树集合（含收集箱根及其全部后代，后代中的任务也算收集箱任务）
         const inboxIds = new Set(inboxRootIds);
@@ -158,24 +175,25 @@ export async function loadData(cfg, features) {
             api.sql.getRows(iSql, inboxRootIds).forEach(r => inboxIds.add(r.noteId));
         }
 
-        // 扫描范围：项目根 + 收集箱根；均未配置时回退全树
-        const scopeIds = [...new Set([...projectRootIds, ...inboxRootIds])];
-        const scope = scopeIds.length > 0 ? scopeIds : [rootId];
+        // ── 项目范围：项目文件夹只约束「项目卡片」的获取，不约束任务/打卡/提醒 ──
+        // 任务/打卡/提醒 = 全树所有笔记按标签解析；项目卡片 = 项目根目录（含子树）内有 state 的笔记
+        const projScopeIds = new Set(projectRootIds);
+        if (projectRootIds.length > 0) {
+            const pSql = `
+                WITH RECURSIVE p(noteId) AS (
+                    SELECT noteId FROM branches
+                    WHERE parentNoteId IN (${projectRootIds.map(() => '?').join(',')}) AND isDeleted = 0
+                    UNION
+                    SELECT b.noteId FROM branches b JOIN p ON b.parentNoteId = p.noteId
+                    WHERE b.isDeleted = 0
+                )
+                SELECT noteId FROM p
+            `;
+            api.sql.getRows(pSql, projectRootIds).forEach(r => projScopeIds.add(r.noteId));
+        }
 
-        // 范围内全部笔记（不限类型，任务取 text，项目不限类型）
-        const subtreeSql = `
-            WITH RECURSIVE subtree(noteId) AS (
-                SELECT noteId FROM branches
-                WHERE parentNoteId IN (${scope.map(() => '?').join(',')}) AND isDeleted = 0
-                UNION
-                SELECT b.noteId FROM branches b JOIN subtree s ON b.parentNoteId = s.noteId
-                WHERE b.isDeleted = 0
-            )
-            SELECT DISTINCT s.noteId, n.title, n.type FROM subtree s
-            JOIN notes n ON n.noteId = s.noteId
-            WHERE n.isDeleted = 0
-        `;
-        const rows = api.sql.getRows(subtreeSql, scope);
+        // 数据源 = 全树全部笔记（不限类型；text 提供任务/打卡/提醒，项目提供进度）
+        const rows = allNodes;
 
         // 一次性查出所有笔记的 state 属性，避免逐条读取
         const stateMap = {};
@@ -201,12 +219,16 @@ export async function loadData(cfg, features) {
         const result = [];
         for (const row of rows) {
             const state = stateMap[row.noteId] || '';
-            // 项目（进行中 / 循环阶段 / 暂停）或 text 笔记才读取内容，避免拉取大文件
             const isProj = isInProgress(state) || isCyclingPhase(state) || isOnHold(state);
+            // 项目卡片范围：配置了项目文件夹 → 仅项目文件夹（含子树）内有 state 的笔记算项目；
+            // 未配置 → 全树带 state 的笔记都算项目。任务/打卡/提醒不受此限制。
+            const inProjScope = projScopeIds.size === 0 || projScopeIds.has(row.noteId);
+            const isProject = isProj && inProjScope;
             // 功能开关：关闭「暂停」时暂停项目不显示、内部任务不进全局视图 → 直接跳过（省 getContent + 解析）
             if (isOnHold(state) && features && features.onHold === false) continue;
             let content = '';
-            if (row.type === 'text' || isProj) {
+            // text 笔记 = 任务/打卡/提醒数据源；项目卡片额外读内容用于进度统计
+            if (row.type === 'text' || isProject) {
                 const note = api.getNote(row.noteId);
                 content = note ? note.getContent() : '';
             }
@@ -217,12 +239,23 @@ export async function loadData(cfg, features) {
                 content,
                 state,
                 priority: priorityMap[row.noteId] || '',
-                isInbox: inboxIds.has(row.noteId)
+                isInbox: inboxIds.has(row.noteId),
+                isProject
             });
         }
 
-        return result;
-    });
+        // 返回任务数据 + 匹配诊断
+        return {
+            notes: result,
+            diag: {
+                projectRootMatched: projectRootIds.length,
+                projectRootTitles: projTitles,
+                inboxMatched: inboxRootIds.length,
+                inboxTitles: inTitles,
+                scopeFallback: projScopeIds.size === 0 // 未配置项目根 → 项目范围为全树
+            }
+        };
+    }, [cfg, features]);
 }
 
 // ── 勾选完成 ──
@@ -502,10 +535,12 @@ export async function stampRepeatDate(noteId, cbIndex, dateStr) {
 
 // ── 打卡切换：在任务 li 下方重建本周打卡子记录 ──
 // dkTags: 打卡标签别名列表（如 ['dk','checkin','habit']），任一标签都识别为打卡
-export async function toggleDkDay(noteId, cbIndex, dateStr, dkTags) {
-    return runOnBackend((noteId, cbIndex, dateStr, dkTags) => {
+export async function toggleDkDay(noteId, cbIndex, dateStr, dkTags, lang) {
+    return runOnBackend((noteId, cbIndex, dateStr, dkTags, lang) => {
 
         const WEEK_CN = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        const WEEK_EN = { '周日': 'Sun', '周一': 'Mon', '周二': 'Tue', '周三': 'Wed', '周四': 'Thu', '周五': 'Fri', '周六': 'Sat' };
+        const EN_DK = { 'Sun': '周日', 'Mon': '周一', 'Tue': '周二', 'Wed': '周三', 'Thu': '周四', 'Fri': '周五', 'Sat': '周六' };
         const pad = n => String(n).padStart(2, '0');
         const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
         const comp = s => String(s).replace(/-/g, '');
@@ -574,7 +609,7 @@ export async function toggleDkDay(noteId, cbIndex, dateStr, dkTags) {
 
         // 3) 收集区域内所有记录 li（叶子 li 且含 dkN周），并识别各自 todo 状态
         const region = content.slice(liStart, nextLiStart);
-        const recRe = /<li[^>]*>((?:(?!<\/?li)[\s\S])*?dk\d+周(?:(?!<\/?li)[\s\S])*?)<\/li>/g;
+        const recRe = /<li[^>]*>((?:(?!<\/?li)[\s\S])*?dk\d+(?:周|w)(?:(?!<\/?li)[\s\S])*?)<\/li>/g;
         const recItems = []; // { range, weekNum, days, raw, state }
         let rm;
         while ((rm = recRe.exec(region)) !== null) {
@@ -596,22 +631,35 @@ export async function toggleDkDay(noteId, cbIndex, dateStr, dkTags) {
         //    days: [{ dow, count, target }]（每天打卡次数 + 当天目标）
         //    兼容旧格式 "周一，周三"（无次数括号 → 按 1 次处理）
         function parseRec(text) {
-            // 注意：([^（]+?) 必须至少一个字符，且"（进度N/M / 相当于是N/M / 周进度N/M）"为必选，
-            // 否则非贪婪 [^（]*? 会匹配空串，导致 days 恒为空、打卡永远被覆盖
+            // 兼容三种记录格式（语言切换/历史遗留并存，内部 dow 统一存中文周名）：
+            //   旧混合: "20260824~20260830 dk1周(Week 1)：周一 Mon(1/2)，周二 Tue(2/2)（周进度4/6 · Weekly 4/6）"
+            //   新中文: "20260824~20260830 dk1周：周一(1/2)，周二(2/2)（周进度4/6）"
+            //   新英文: "20260824~20260830 dk1w(Week 1): Mon(1/2), Tue(2/2) (Weekly 4/6)"
+            // 天列表之后必须跟进度括号（中文 （周进度N/M…） 或英文 (Weekly N/M)），否则视为非法记录
             // 进度数允许 NaN：兼容旧 bug 写入的 "周进度1/NaN" 脏数据，使记录能被解析保留，
             // 下次打卡重建时会用正确进度重写（自愈）
-            const m = text.match(/(\d{8})~(\d{8})\s+dk(\d+)周：([^（]+?)（(?:相当于是|进度|周进度)(?:\d+|NaN)\/(?:\d+|NaN)）/);
+            const m = text.match(/^(\d{8})~(\d{8})\s+dk(\d+)(?:周|w)?(?:\s*\(\s*Week\s*\d+\s*\))?\s*[：:]/);
             if (!m) return null;
+            let body = text.slice(m[0].length)
+                .replace(/（(?:(?:相当于是|进度|周进度)(?:\d+|NaN)\/(?:\d+|NaN)(?:\s*[·,|/]\s*Weekly\s*(?:\d+|NaN)\/(?:\d+|NaN))?)）\s*$/, '')
+                .replace(/\(\s*Weekly\s*(?:\d+|NaN)\/(?:\d+|NaN)\s*\)\s*$/, '')
+                .trim();
+            if (!body) return null;
             const dayCounts = [];
-            for (const item of m[4].split(/[，,、\s]+/).filter(Boolean)) {
-                const dm = item.match(/^(周[一二三四五六日])(?:\((\d+)\/(\d+)\))?/);
-                if (!dm) continue;
+            const dayRe = /^(?:周[一二三四五六日])?\s*(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)?\s*(?:\((\d+)\/(\d+)\))?$/;
+            for (const part of body.split(/[，,]\s*/)) {
+                const dm = part.match(dayRe);
+                if (!dm || !dm[0]) continue;
+                const cn = (part.match(/周[一二三四五六日]/) || [null])[0];
+                const en = (part.match(/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/) || [null, null])[1];
+                if (!cn && !en) continue;
                 dayCounts.push({
-                    dow: dm[1],
-                    count: dm[2] ? parseInt(dm[2], 10) : 1,
-                    target: dm[3] ? parseInt(dm[3], 10) : 1
+                    dow: cn || EN_DK[en],
+                    count: dm[1] ? parseInt(dm[1], 10) : 1,
+                    target: dm[2] ? parseInt(dm[2], 10) : 1
                 });
             }
+            if (dayCounts.length === 0) return null;
             return {
                 range: `${m[1]}~${m[2]}`,
                 weekNum: parseInt(m[3], 10),
@@ -668,21 +716,33 @@ export async function toggleDkDay(noteId, cbIndex, dateStr, dkTags) {
 
         // 7) 重建记录 ul：保留各记录原状态（不冲掉用户标记的完成/取消），
         //    本周记录若存在则更新为新文本并重新变为进行中；清零则删除该记录
-        //    文本格式: "20260817~20260823 dk1周：周一(1/2) 周二(2/2)（周进度4/6）"
-        const dayText = dayCounts.map(x => `${x.dow}(${x.count}/${dkPerDay})`).join(' ');
+        //    写入文本按界面语言：中文仅中文周名，英文仅英文周名（不混排）
+        //    中文: "20260817~20260823 dk1周：周一(1/2)，周二(2/2)（周进度2/5）"
+        //    英文: "20260817~20260823 dk1w(Week 1): Mon(1/2), Tue(2/2) (Weekly 2/5)"
+        const isEn = lang === 'en';
+        const dayText = dayCounts.map(x => isEn
+            ? `${WEEK_EN[x.dow]}(${x.count}/${dkPerDay})`
+            : `${x.dow}(${x.count}/${dkPerDay})`
+        ).join(isEn ? ', ' : '，');
         // 总进度按天数算：当天次数打满（count >= dkPerDay）才算 1 天
         const daysDone = dayCounts.filter(x => x.count >= dkPerDay).length;
-        const weekProgressText = `（周进度${daysDone}/${dkDays}）`;
+        const weekProgressText = isEn
+            ? ` (Weekly ${daysDone}/${dkDays})`
+            : `（周进度${daysDone}/${dkDays}）`;
         let weekUpdated = false;
         const outRecs = recItems.map(r => {
             if (r.range !== weekRange) return r;
             weekUpdated = true;
             if (dayCounts.length === 0) return null; // 清零 → 删除本周记录
-            const newText = `${weekRange} dk${weekNum}周：${dayText}${weekProgressText}`;
+            const newText = isEn
+                ? `${weekRange} dk${weekNum}w(Week ${weekNum}): ${dayText}${weekProgressText}`
+                : `${weekRange} dk${weekNum}周：${dayText}${weekProgressText}`;
             return { ...r, days: dayCounts, raw: newText, state: 'doing' };
         }).filter(Boolean);
         if (!weekUpdated && dayCounts.length > 0) {
-            const newText = `${weekRange} dk${weekNum}周：${dayText}${weekProgressText}`;
+            const newText = isEn
+                ? `${weekRange} dk${weekNum}w(Week ${weekNum}): ${dayText}${weekProgressText}`
+                : `${weekRange} dk${weekNum}周：${dayText}${weekProgressText}`;
             outRecs.push({ range: weekRange, weekNum, days: dayCounts, raw: newText, state: 'doing' });
         }
         outRecs.sort((a, b) => b.weekNum - a.weekNum);  // 最新周在前
@@ -706,7 +766,7 @@ export async function toggleDkDay(noteId, cbIndex, dateStr, dkTags) {
         note.setContent(finalContent);
         // 回显验证：setContent 后立即读回，确认 Trilium 是否保留记录 li 结构
         const echoed = note.getContent();
-        const echoDkPositions = [...echoed.matchAll(/dk\d+周/g)].map(m => m.index);
+        const echoDkPositions = [...echoed.matchAll(/dk\d+(?:周|w)/g)].map(m => m.index);
         const echoIdx = echoDkPositions.length > 0 ? echoDkPositions[0] : -1;
         return {
             days: dayCounts,
@@ -729,7 +789,7 @@ export async function toggleDkDay(noteId, cbIndex, dateStr, dkTags) {
             }
         };
 
-    }, [noteId, cbIndex, dateStr, dkTags]);
+    }, [noteId, cbIndex, dateStr, dkTags, lang]);
 }
 
 // ── 间隔计时提醒状态持久化 ──

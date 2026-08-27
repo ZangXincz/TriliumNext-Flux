@@ -30,7 +30,7 @@ const { createI18n } = i18n;
 
 // ── 插件元信息 ──
 const PLUGIN_VERSION = '1.0.0';
-const PLUGIN_REPO = 'https://github.com/你的用户名/triliumnext-flux'; // TODO: 发布前替换为真实仓库地址
+const PLUGIN_REPO = 'https://github.com/ZangXincz/TriliumNext-Flux'; // TODO: 发布前替换为真实仓库地址
 
 // ── 默认配置（与配置笔记模板保持一致）──
 const DEFAULT_CONFIG = {
@@ -48,7 +48,7 @@ const DEFAULT_CONFIG = {
         inbox: true
     },
     inbox: { titles: ['inbox', '收集箱'] },
-    projectRoot: { titles: ['Projects'] },
+    projectRoot: { titles: [] }, // 留空 = 全树带 state 的笔记都算项目
     dk: { tags: ['dk', 'checkin', 'habit'] },
     tx: { tags: ['tx', 'timer', 'pomodoro'], defaultRest: 5, notifyMethods: ['message', 'sound'] }
 };
@@ -132,6 +132,7 @@ export default function TriliumNextFlux() {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [settingsTab, setSettingsTab] = useState('general');
     const [draft, setDraft] = useState(null);
+    const [settingsError, setSettingsError] = useState('');
 
     // 设置弹窗：按 ESC 关闭
     useEffect(() => {
@@ -172,12 +173,14 @@ export default function TriliumNextFlux() {
         busyRef.current = true;
         try {
             const cfg = configRef.current;
-            // 后端: 查询任务数据（收集箱 / 项目根按配置匹配；未配置则全树）。
+            // 后端: 任务/打卡/提醒全树扫描；项目卡片范围按项目文件夹配置限定。
             // 传入功能开关：关闭「暂停」时后端直接跳过暂停项目（不读内容不返回）
-            const data = await loadData({
+            const res = await loadData({
                 inboxTitles: (cfg.inbox && cfg.inbox.titles) || [],
                 projectRootTitles: (cfg.projectRoot && cfg.projectRoot.titles) || []
             }, cfg.features);
+            // 兼容旧格式（后端缓存未刷新时可能直接返回数组）
+            const data = Array.isArray(res) ? res : (res.notes || []);
             // 前端: 解析每个笔记的任务 + 勾选统计（打卡/提醒支持配置的标签别名）
             const tags = {
                 dk: (cfg.dk && cfg.dk.tags) || ['dk'],
@@ -188,7 +191,8 @@ export default function TriliumNextFlux() {
                 const tasks = parseTasks(note.content, today, tags, cfg.features);
                 // 项目卡片才需要 done/total 进度；普通任务不做重复的 DOM 解析
                 const st = normState(note.state);
-                const isProj = st === 'inprogress' || st === 'cyclingphase' || st === 'onhold';
+                // 项目卡片：后端已按「项目文件夹配置」判定（note.isProject）；旧缓存无此字段时按 state 兜底
+                const isProj = note.isProject !== false && (st === 'inprogress' || st === 'cyclingphase' || st === 'onhold');
                 const cb = isProj ? countCheckboxes(note.content) : { done: 0, total: 0 };
                 return Object.assign({}, note, { tasks, done: cb.done, total: cb.total });
             });
@@ -276,7 +280,7 @@ export default function TriliumNextFlux() {
         setWorkingKeys(prev => new Map(prev).set(key, { dateStr }));
         try {
             const cfg = configRef.current;
-            await toggleDkDay(t.noteId, t.checkboxIndex, dateStr, (cfg.dk && cfg.dk.tags) || ['dk']);
+            await toggleDkDay(t.noteId, t.checkboxIndex, dateStr, (cfg.dk && cfg.dk.tags) || ['dk'], cfg.lang);
             await load();
         } catch (e) {
             console.error(e);
@@ -397,6 +401,7 @@ export default function TriliumNextFlux() {
     function openSettings() {
         setDraft(JSON.parse(JSON.stringify(configRef.current)));
         setSettingsTab('general');
+        setSettingsError('');
         setSettingsOpen(true);
     }
 
@@ -414,19 +419,17 @@ export default function TriliumNextFlux() {
     }
 
     // 保存：合并写入配置笔记，立即生效并刷新面板
+    // 失败时保留弹窗并在弹窗顶部提示（常见原因：宿主笔记未配置 ~configNote 关系 / 配置笔记类型不对）
     async function handleSaveSettings() {
         try {
             const res = await saveJsonConfig(hostNoteId, draft);
+            const ET = createI18n(draft ? draft.lang : config.lang);
             if (!res || !res.ok) {
-                setErrorMsg(res && res.error ? String(res.error) : tRef.current('settings.noConfigNote'));
-                setStatus('error');
-                setSettingsOpen(false);
+                setSettingsError(res && res.error ? String(res.error) : ET('settings.noConfigNote'));
                 return;
             }
             if (res.noteType && res.noteType !== 'json' && res.noteType !== 'code') {
-                setErrorMsg(`配置笔记是 ${res.noteType} 类型，必须是 json 或 code 类型才能保存配置。请在宿主笔记上添加 ~configNote 关系，指向一个 json/code 类型的配置笔记。`);
-                setStatus('error');
-                setSettingsOpen(false);
+                setSettingsError(ET('settings.wrongType', { type: res.noteType }));
                 return;
             }
             const merged = deepMerge(DEFAULT_CONFIG, res.config || draft);
@@ -436,9 +439,7 @@ export default function TriliumNextFlux() {
             await load();
         } catch (e) {
             console.error('[th] 保存配置失败', e);
-            setErrorMsg(String(e && e.message || e));
-            setStatus('error');
-            setSettingsOpen(false);
+            setSettingsError(String(e && e.message || e));
         }
     }
 
@@ -447,16 +448,13 @@ export default function TriliumNextFlux() {
         if (!window.confirm(tRef.current('settings.resetConfirm'))) return;
         try {
             const res = await saveJsonConfig(hostNoteId, DEFAULT_CONFIG);
+            const ET = createI18n(draft ? draft.lang : config.lang);
             if (!res || !res.ok) {
-                setErrorMsg(res && res.error ? String(res.error) : tRef.current('settings.noConfigNote'));
-                setStatus('error');
-                setSettingsOpen(false);
+                setSettingsError(res && res.error ? String(res.error) : ET('settings.noConfigNote'));
                 return;
             }
             if (res.noteType && res.noteType !== 'json' && res.noteType !== 'code') {
-                setErrorMsg(`配置笔记是 ${res.noteType} 类型，必须是 json 或 code 类型才能保存配置。请在宿主笔记上添加 ~configNote 关系，指向一个 json/code 类型的配置笔记。`);
-                setStatus('error');
-                setSettingsOpen(false);
+                setSettingsError(ET('settings.wrongType', { type: res.noteType }));
                 return;
             }
             const merged = deepMerge(DEFAULT_CONFIG, res.config || {});
@@ -466,9 +464,7 @@ export default function TriliumNextFlux() {
             await load();
         } catch (e) {
             console.error('[th] 重置配置失败', e);
-            setErrorMsg(String(e && e.message || e));
-            setStatus('error');
-            setSettingsOpen(false);
+            setSettingsError(String(e && e.message || e));
         }
     }
 
@@ -533,6 +529,7 @@ export default function TriliumNextFlux() {
                     onReset={handleResetSettings}
                     version={PLUGIN_VERSION}
                     repo={PLUGIN_REPO}
+                    error={settingsError}
                 />
             )}
         </div>

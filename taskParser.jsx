@@ -33,24 +33,44 @@ function nextAllUls(el) {
 }
 
 // 解析打卡记录行：
-//   新格式 "20260824~20260830 dk1周：周一(1/2) 周二(2/2)（周进度4/6）"
-//   旧格式 "20260824~20260830 dk1周：周一，周三（进度2/4）"（无次数括号 → 按 1 次处理）
-// 注意：([^（]+?) 至少一个字符 + "（进度N/M / 相当于是N/M / 周进度N/M）"必选，
-// 否则非贪婪 [^（]*? 匹配空串 → days 恒为空 → 前端永远 0/目标
+//   双语格式 "20260824~20260830 dk1周(Week 1)：周一 Mon(1/2)，周二 Tue(2/2)（周进度4/6 · Weekly 4/6）"
+//   旧格式   "20260824~20260830 dk1周：周一(1/2) 周二(2/2)（周进度4/6）"
+//   更旧格式 "20260824~20260830 dk1周：周一，周三（进度2/4）"（无次数括号 → 按 1 次处理）
+// 兼容三种记录格式（语言切换/历史遗留并存，内部 dow 统一存中文周名）：
+//   旧混合: "20260824~20260830 dk1周(Week 1)：周一 Mon(1/2)，周二 Tue(2/2)（周进度4/6 · Weekly 4/6）"
+//   新中文: "20260824~20260830 dk1周：周一(1/2)，周二(2/2)（周进度4/6）"
+//   新英文: "20260824~20260830 dk1w(Week 1): Mon(1/2), Tue(2/2) (Weekly 4/6)"
+// 注意：天列表之后必须跟进度括号（中文 （周进度N/M…） 或英文 (Weekly N/M)），
+// 否则视为非法记录 → 返回 null，防止解析错位
 // 返回 days: [{ dow, count, target }]（每天打卡次数 + 当天目标）
 function parseDkRecord(text) {
     // 进度数允许 NaN：兼容历史脏数据 "周进度1/NaN"（后端多别名正则 bug 写入），
     // 否则该条记录解析失败导致 UI 不显示；NaN 会被 parseInt||0 兜底为 0
-    const m = text.match(/(\d{8})~(\d{8})\s+dk(\d+)周：([^（]+?)（(?:相当于是|进度|周进度)(\d+|NaN)\/(\d+|NaN)）/);
+    const EN_DK = { 'Sun': '周日', 'Mon': '周一', 'Tue': '周二', 'Wed': '周三', 'Thu': '周四', 'Fri': '周五', 'Sat': '周六' };
+    const m = text.match(/^(\d{8})~(\d{8})\s+dk(\d+)(?:周|w)?(?:\s*\(\s*Week\s*\d+\s*\))?\s*[：:]/);
     if (!m) return null;
+    // 进度括号：中文 （周进度4/6 · Weekly 4/6）/（周进度4/6） 或英文 (Weekly 4/6)
+    const progM = text.match(/（(?:(?:相当于是|进度|周进度)(?:\d+|NaN)\/(\d+|NaN)(?:\s*[·,|/]\s*Weekly\s*(?:\d+|NaN)\/(?:\d+|NaN))?)）\s*$/)
+        || text.match(/\(\s*Weekly\s*(?:\d+|NaN)\/(\d+|NaN)\s*\)\s*$/);
+    if (!progM) return null;
+    const targetWk = parseInt(progM[1], 10) || 0;
+    let body = text.slice(m[0].length)
+        .replace(/（(?:(?:相当于是|进度|周进度)(?:\d+|NaN)\/(?:\d+|NaN)(?:\s*[·,|/]\s*Weekly\s*(?:\d+|NaN)\/(?:\d+|NaN))?)）\s*$/, '')
+        .replace(/\(\s*Weekly\s*(?:\d+|NaN)\/(?:\d+|NaN)\s*\)\s*$/, '')
+        .trim();
+    if (!body) return null;
     const dayCounts = [];
-    for (const item of m[4].split(/[，,、\s]+/).filter(Boolean)) {
-        const dm = item.match(/^(周[一二三四五六日])(?:\((\d+)\/(\d+)\))?/);
-        if (!dm) continue;
+    const dayRe = /^(?:周[一二三四五六日])?\s*(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)?\s*(?:\((\d+)\/(\d+)\))?$/;
+    for (const part of body.split(/[，,]\s*/)) {
+        const dm = part.match(dayRe);
+        if (!dm || !dm[0]) continue;
+        const cn = (part.match(/周[一二三四五六日]/) || [null])[0];
+        const en = (part.match(/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/) || [null, null])[1];
+        if (!cn && !en) continue;
         dayCounts.push({
-            dow: dm[1],
-            count: dm[2] ? parseInt(dm[2], 10) : 1,
-            target: dm[3] ? parseInt(dm[3], 10) : 1
+            dow: cn || EN_DK[en],
+            count: dm[1] ? parseInt(dm[1], 10) : 1,
+            target: dm[2] ? parseInt(dm[2], 10) : 1
         });
     }
     return {
@@ -60,7 +80,7 @@ function parseDkRecord(text) {
         days: dayCounts,
         // 总进度按天数算：当天次数打满（count >= target）才算 1 天
         count: dayCounts.filter(x => x.count >= x.target).length,
-        target: parseInt(m[6], 10) || 0
+        target: targetWk
     };
 }
 

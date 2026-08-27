@@ -16,7 +16,7 @@
 		"titles": ["inbox", "收集箱"]
 	},
 	"projectRoot": {
-		"titles": ["Projects"]
+		"titles": []
 	},
 	"dk": {
 		"tags": ["dk", "checkin", "habit"]

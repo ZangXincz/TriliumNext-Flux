@@ -412,10 +412,14 @@ function Toggle({ label, desc, checked, onChange }) {
     );
 }
 
-// 标签列表输入（逗号/顿号分隔，自动转数组）
+// 标签列表输入（逗号/顿号分隔）
+// 非受控显示：输入任何字符/中文/分隔符都不会被吞、光标不跳；
+// 每次输入即时解析为数组同步草稿 → 保存时必然拿到最新值（不依赖失焦/回车时序）
 function TagsInput({ value, onChange, placeholder }) {
     return (
-        <input class="th-set-input" value={(value || []).join('，')} placeholder={placeholder}
+        <input class="th-set-input"
+               defaultValue={(value || []).join('，')}
+               placeholder={placeholder}
                onChange={e => onChange(String(e.target.value).split(/[,，、]/).map(s => s.trim()).filter(Boolean))} />
     );
 }
@@ -503,7 +507,7 @@ function ProjectsTab({ t, draft, onPatch }) {
                     <span class="th-set-label">{t('set.projectRoot')}</span>
                     <span class="th-set-desc">{t('set.projectRootDesc')}</span>
                 </div>
-                <TagsInput value={draft.projectRoot.titles} placeholder="Projects"
+                <TagsInput value={draft.projectRoot.titles} placeholder={t('set.projectRootPlaceholder')}
                            onChange={v => onPatch('projectRoot.titles', v)} />
             </div>
             <HelpBox items={t('help.projects')} t={t} />
@@ -593,7 +597,7 @@ function TxTab({ t, draft, onPatch }) {
 //   onPatch — (path, value) 更新草稿字段，path 用点号路径
 //   onSave / onClose / onReset
 //   version / repo — 基础设置页展示
-export function SettingsModal({ t, draft, tab, onTab, onPatch, onSave, onClose, onReset, version, repo }) {
+export function SettingsModal({ t, draft, tab, onTab, onPatch, onSave, onClose, onReset, version, repo, error }) {
     const TABS = [
         { key: 'general', label: t('tab.general') },
         { key: 'tasks', label: t('tab.tasks') },
@@ -614,6 +618,9 @@ export function SettingsModal({ t, draft, tab, onTab, onPatch, onSave, onClose, 
                     ))}
                 </div>
                 <div class="th-modal-body">
+                    {error && (
+                        <div style="color:#e64553;background:rgba(230,69,83,.1);padding:10px 12px;border-radius:8px;font-size:13px;margin-bottom:12px;white-space:pre-wrap;">{error}</div>
+                    )}
                     {tab === 'general' && <GeneralTab t={t} draft={draft} onPatch={onPatch} version={version} repo={repo} />}
                     {tab === 'tasks' && <TasksTab t={t} draft={draft} onPatch={onPatch} />}
                     {tab === 'projects' && <ProjectsTab t={t} draft={draft} onPatch={onPatch} />}

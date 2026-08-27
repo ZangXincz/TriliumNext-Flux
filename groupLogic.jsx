@@ -74,7 +74,8 @@ export function classifyNotes(notes, today, features) {
     for (const note of notes) {
         const tasks = note.tasks || [];
         const stateNorm = normState(note.state);
-        const isProj = stateNorm === 'inprogress' || stateNorm === 'cyclingphase' || stateNorm === 'onhold';
+        // 项目判定以后端 isProject 为准（受项目文件夹配置约束）；旧缓存无此字段时按 state 兜底
+        const isProj = note.isProject !== false && (stateNorm === 'inprogress' || stateNorm === 'cyclingphase' || stateNorm === 'onhold');
 
         if (isProj) {
             const p = {
@@ -90,9 +91,8 @@ export function classifyNotes(notes, today, features) {
             else if (p.onHold) { if (f.onHold) onHoldProjects.push(p); }
             else { if (f.projects) projects.push(p); }
 
-            // 暂停/等待响应的项目不参与日常视图（内部任务不纳入全局）
-            if (p.onHold) continue;
-
+            // 暂停项目内部任务也纳入全局视图：项目可能正在等待某个任务完成，
+            // 该任务的截止日期/重复/打卡提醒仍需显示，直到任务完成才解除暂停
             // 项目内带日期的任务也纳入全局视图
             for (const t of tasks) {
                 const item = Object.assign({}, t, {

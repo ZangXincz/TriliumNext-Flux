@@ -2,6 +2,8 @@
 
 > 个人日常项目任务管理 · TriliumNext 插件
 
+> **简体中文 | [English](./README.md)**
+
 ## 项目简介
 
 把「以项目达成目标」这件事，在 Trilium 笔记里变成每天看得见、做得完的任务面板。
@@ -24,7 +26,7 @@ TriliumNext Flux 是一个运行在 [TriliumNext](https://github.com/TriliumNext
 
 ## 界面预览
 
-![TriliumNext Flux 面板示意](./docs/screenshoten.png)
+![TriliumNext Flux 面板示意](./docs/screenshot.png)
 
 > 示意图：左侧为打卡与间隔计时提醒卡片，右侧为任务与项目分组。
 
@@ -45,10 +47,10 @@ TriliumNext Flux 是一个运行在 [TriliumNext](https://github.com/TriliumNext
    ![alt text](./docs/importgraphic.png)
 
 3. 创建一个Home页，笔记类型为`渲染笔记`，设置属性`~renderNote=TriliumNext Flux` 和`~configNote=config`，保存后F5刷新
-![alt text](./docs/HomeNoteTypeen.png)
+![alt text](./docs/HomeNoteType.png)
 
 这样就基本配置完成了，后续可以在设置进行基础修改和查看基本使用说明
-![alt text](./docs/seten.png)
+![alt text](./docs/set.png)
 
 
 ## 使用方法

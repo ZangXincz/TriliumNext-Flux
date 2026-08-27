@@ -2,6 +2,8 @@
 
 > Personal daily project & task manager · TriliumNext plugin
 
+> **[简体中文](./README.zh.md) | English**
+
 ## Overview
 
 Turn "achieving goals through projects" into a task panel you can see and complete every day, right inside your Trilium notes.
@@ -39,16 +41,16 @@ TriliumNext Flux is a Render plugin that runs in [TriliumNext](https://github.co
 1. If backend script execution has not been enabled before, enable it under `Settings` → `Security`
 
 2. **Import the plugin zip**: right-click the Trilium root directory → Import into note → select the zip file → uncheck "Safe import"
-   ![alt text](./docs/importzip.png)
+   ![alt text](./docs/importzipen.png)
 
    After import
    ![alt text](./docs/importgraphic.png)
 
 3. Create a Home note with type `Render`, set attributes `~renderNote=TriliumNext Flux` and `~configNote=config`, save and press F5 to refresh
-   ![alt text](./docs/HomeNoteType.png)
+   ![alt text](./docs/HomeNoteTypeen.png)
 
 That's it — the basic setup is done. You can tweak the basics and view the usage guide in the settings afterwards
-![alt text](./docs/set.png)
+![alt text](./docs/seten.png)
 
 ## Usage
 

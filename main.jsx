@@ -30,7 +30,7 @@ const { createI18n } = i18n;
 const { initTagQuickInsert, destroyTagQuickInsert } = tagQuickInsert;
 
 // ── 插件元信息 ──
-const PLUGIN_VERSION = '1.2.0';
+const PLUGIN_VERSION = '1.2.2';
 const PLUGIN_REPO = 'https://github.com/ZangXincz/TriliumNext-Flux'; // TODO: 发布前替换为真实仓库地址
 
 // ── 默认配置（与配置笔记模板保持一致）──

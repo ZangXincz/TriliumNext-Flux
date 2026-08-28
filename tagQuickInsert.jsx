@@ -475,13 +475,30 @@ function positionPopup() {
     if (!popupEl) return;
     popupEl.style.display = 'block';
     const w = popupEl.offsetWidth || 320;
+    const h = popupEl.offsetHeight || 220;
+    const M = 6;    // 光标与弹窗间距
+    const EDGE = 8; // 视口边距
     try {
         const sel = window.getSelection();
         if (sel && sel.rangeCount) {
             const rect = sel.getRangeAt(0).getClientRects()[0] || sel.getRangeAt(0).getBoundingClientRect();
             if (rect) {
-                popupEl.style.left = Math.min(rect.left, window.innerWidth - w - 10) + 'px';
-                popupEl.style.top = (rect.bottom + 6) + 'px';
+                const left = Math.max(EDGE, Math.min(rect.left, window.innerWidth - w - EDGE));
+                const spaceBelow = window.innerHeight - rect.bottom - M;
+                const spaceAbove = rect.top - M;
+                let top;
+                if (spaceBelow < h && spaceAbove >= h) {
+                    // 下方放不下、上方放得下 → 弹到光标上方，避免下部分被遮挡
+                    top = Math.max(EDGE, rect.top - h - M);
+                } else {
+                    // 默认下方；两侧都放不下时也优先下方，但强行收进视口
+                    top = rect.bottom + M;
+                    if (top + h > window.innerHeight - EDGE) {
+                        top = Math.max(EDGE, window.innerHeight - h - EDGE);
+                    }
+                }
+                popupEl.style.left = left + 'px';
+                popupEl.style.top = top + 'px';
                 return;
             }
         }
@@ -605,7 +622,9 @@ function escapeHtml(s) {
     })[c]);
 }
 
-// ── 全局键盘：浮层导航（捕获阶段，仅浮层显示时拦截）──
+// ── 全局键盘/鼠标：挂 window 捕获阶段（比 document 更外层），
+//    即使 Trilium 在 document 上注册的捕获监听先 stopPropagation，
+//    这里也能在事件传播的更早阶段收到，保证 Esc / 点击外部一定可关闭。──
 function onKeydown(e) {
     if (!shown) return;
     if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); moveSelection(1); }
@@ -633,9 +652,9 @@ export function initTagQuickInsert({ t, config } = {}) {
     if (bound) return; // 已注册过全局监听器，仅刷新候选池/i18n
     bound = true;
     injectTqiStyles();
-    document.addEventListener('input', onGlobalInput, true);
-    document.addEventListener('keydown', onKeydown, true);
-    document.addEventListener('mousedown', onDocMousedown, true);
+    window.addEventListener('input', onGlobalInput, true);
+    window.addEventListener('keydown', onKeydown, true);
+    window.addEventListener('mousedown', onDocMousedown, true);
     startPolling();
     ensureEditorBound();
     dbg('v5.0 已初始化（Flux 子模块）');
@@ -645,9 +664,9 @@ export function destroyTagQuickInsert() {
     if (!bound) return;
     bound = false;
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-    document.removeEventListener('input', onGlobalInput, true);
-    document.removeEventListener('keydown', onKeydown, true);
-    document.removeEventListener('mousedown', onDocMousedown, true);
+    window.removeEventListener('input', onGlobalInput, true);
+    window.removeEventListener('keydown', onKeydown, true);
+    window.removeEventListener('mousedown', onDocMousedown, true);
     hidePopup();
     if (popupEl && popupEl.parentNode) popupEl.parentNode.removeChild(popupEl);
     popupEl = null;

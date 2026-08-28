@@ -59,6 +59,12 @@ const TQI_DEFAULT_CANDIDATES = [
       desc: { zh: '专注计时', en: 'Focus timer' } },
     { icon: '⏱', label: 'timer:25', group: 'timer', insert: '#timer:25', cont: true, desc: { zh: '专注 25 分', en: 'Focus 25 min' } },
     { icon: '⏱', label: 'timer:50', group: 'timer', insert: '#timer:50', cont: true, desc: { zh: '专注 50 分', en: 'Focus 50 min' } },
+    // ── 固定排序 #priority（子组，前缀过滤同 next；任意 1-10 数字由动态层补全）──
+    { icon: '🔝', label: 'priority', expand: 'priority', insert: '#priority:5',
+      desc: { zh: '固定排序', en: 'Fixed order' } },
+    { icon: '🔝', label: 'priority:1', group: 'priority', insert: '#priority:1', desc: { zh: '最前', en: 'Top' } },
+    { icon: '🔝', label: 'priority:5', group: 'priority', insert: '#priority:5', desc: { zh: '常用', en: 'Common' } },
+    { icon: '🔝', label: 'priority:10', group: 'priority', insert: '#priority:10', desc: { zh: '靠后', en: 'Bottom' } },
 ];
 
 // ── 状态 ──
@@ -398,8 +404,26 @@ function timerCandidates(q) {
     return items;
 }
 
+// priority 固定排序动态补全：输入 priority / priority:N 生成 1-10
+// 未输数字：显示常用档 1/2/3/5/7/10；已输数字：精确过滤（priority:1 → 1、10；priority:9 → 9）
+function priorityCandidates(q) {
+    const m = q.match(/^priority:(\d*)$/i);
+    const cur = m ? m[1] : '';
+    const nums = cur
+        ? ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].filter(n => n.startsWith(cur))
+        : ['1', '2', '3', '5', '7', '10'];
+    return nums.map(n => ({
+        icon: '🔝',
+        label: 'priority:' + n,
+        insert: '#priority:' + n,
+        desc: { zh: '固定排序 ' + n + '（越小越靠前）', en: 'Sort ' + n + ' (lower first)' }
+    }));
+}
+
 // 总入口：动态优先，静态池前缀匹配兜底
 function getCandidates(q) {
+    // ── priority 固定排序：priority / priority:N → 动态补全 1-10 ──
+    if (/^priority(?::\d*)?$/i.test(q)) return priorityCandidates(q);
     // ── repeat 动态层进：任何单位选定后（repeat:1d / repeat:2w / repeat:1d:…）生成锚点组合；
     //    数字已输但静态池未预置（repeat:2 / repeat:25）时先动态补全单位。timer 同理。──
     if (/^repeat:\d+[dwmy]($|:)/.test(q)) return repeatSuffixCandidates(q);

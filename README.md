@@ -22,6 +22,7 @@ TriliumNext Flux is a Render plugin that runs in [TriliumNext](https://github.co
 | Zero dependencies | Pure frontend implementation, no third-party libraries |
 | Bilingual | One-click language switch (Chinese / English) |
 | Flexible config | Each feature can be toggled; fixed tags with built-in # quick insert |
+| Fixed sort | `#priority` tags pin the order of tasks / check-ins / timers (1-10) |
 | Lightweight | Auto-refresh every 30 seconds without extra overhead |
 
 ## Preview
@@ -156,6 +157,25 @@ Each card shows the project's checkbox progress `done/total`. Click a card to op
 
 > Scope note: by default all notes with the `state` attribute are scanned; if you configure "Project root" in settings, only project cards inside those folders (including subtrees) are counted.
 
+### Fixed sort for tasks (#priority)
+
+Pin the order of task rows, weekly check-in cards and interval timer cards with a `#priority` tag (N=1~10, **lower = first**):
+
+```markdown
+- [ ] Review today's plan #2026-08-28 #priority:1
+- [ ] Weekly summary #habit:5 #priority:2
+- [ ] Deep work #timer:50:10 #priority:3
+```
+
+Syntax: `#priority:<N>` — four forms are accepted: `#priority:1` / `#priority1` / `#p:1` / `#p1`.
+
+**Rules**:
+
+- Sorting is **date first, then priority within the same date**; tasks without `#priority` go last, keeping their original order (JS stable sort).
+- Weekly check-ins have no date, so their order is fully controlled by `#priority` — **checking in no longer shuffles the cards**.
+- Task rows show the priority as a numeric badge styled like the date tag, placed right before it. Check-in and timer cards do **not** show the badge (sort only).
+- This is a task-text tag, distinct from the project attribute `#priority=P1` used to sort project cards.
+
 ### Inbox
 
 Great for jotting down ideas and loose to-dos that you haven't decided where to put yet, and organizing them later. No date or project needed:
@@ -226,8 +246,8 @@ The tag is fixed to `#timer` (no customization).
 
 Type `#` in task text and a candidate menu pops up for fast tag completion — dates, repeat, check-in, timer (can be disabled in settings):
 
-- Type `#` → common candidates: today / tomorrow / more dates (type `next` to expand) / `#repeat` / `#habit` / `#timer`
-- Keep typing to filter in real time, e.g. `#repeat:2w`, `#habit:3`, `#timer:50`
+- Type `#` → common candidates: today / tomorrow / more dates (type `next` to expand) / `#repeat` / `#habit` / `#timer` / `#priority`
+- Keep typing to filter in real time, e.g. `#repeat:2w`, `#habit:3`, `#timer:50`, `#priority:1`
 - `↑` `↓` to select, `Enter` or `Tab` to insert, or click directly
 - Can be turned off under Settings → General
 

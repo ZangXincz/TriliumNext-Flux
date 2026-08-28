@@ -65,6 +65,17 @@ export const TASK_STYLES = `
         color: var(--muted-text-color, #888);
         white-space: nowrap;
     }
+    /* 任务行右侧标签组：#priority 固定排序徽标 + 日期标签，整组靠右、内部紧挨 */
+    .th-task-meta {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+    .th-task-meta .th-task-date {
+        margin-left: 0;
+    }
     .th-task-date.overdue,
     .th-task-date.today {
         color: #e64553;

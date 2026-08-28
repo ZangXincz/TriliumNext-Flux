@@ -34,6 +34,7 @@ const ZH = {
     'task.today': '今日',
     'task.overdue': '逾期',
     'task.repeat': '重复任务',
+    'task.priority': '固定排序（1-10，越小越靠前）',
 
     // ── 项目 ──
     'project.open': '打开项目',
@@ -161,22 +162,25 @@ const ZH = {
         ['#2026-08-27', '指定日期：今天到期显示在「今日」，未来显示在「计划任务」。'],
         ['#repeat:1w', '每周重复（1d/1w/1m/1y）。必须同时标注 #日期 作为起点，完成时自动按周期推进并记录历史。'],
         ['#repeat:1m:start', '每月初重复；:end 每月底；:endwork 每月末工作日（位置型可省略 #日期）。'],
-        ['#repeat:1d:actual', '按实际完成日期推进——断更后再完成，下次计划从实际完成那天起算，不补齐错过的日期。']
+        ['#repeat:1d:actual', '按实际完成日期推进——断更后再完成，下次计划从实际完成那天起算，不补齐错过的日期。'],
+        ['#priority:1', '同日期内固定排序（1-10，越小越靠前；不写按默认顺序）。任务、打卡、提醒通用。']
     ],
     'help.projects': [
         ['state=In-Progress', '项目显示在「进行中的项目」。'],
         ['state=On-Hold', '项目显示在「暂停 / 等待响应」。'],
         ['state=Cycling-Phase', '项目显示在「循环阶段项目」。'],
-        ['#priority=P1', '项目排序优先级（P1 最高，P2、P3 依次）。']
+        ['#priority=P1', '项目排序优先级（P1 最高，P2、P3 依次）。注意是笔记属性，与任务内 #priority:1 标签不同。']
     ],
     'help.dk': [
         ['#habit:5', '每周目标 5 天，每天最多 1 次。'],
         ['#habit:4:2', '每周目标 4 天，每天最多 2 次；当天全部打满才算 1 天，总进度按天数计。'],
+        ['#priority:1', '固定打卡卡片顺序（1-10，越小越靠前）——打卡后顺序不再变化。'],
         ['点击格子', '打卡记录自动写入任务下方子列表。']
     ],
     'help.tx': [
         ['#timer:50:10', '进行 50 分钟，休息 10 分钟。'],
         ['#timer:25:5:专注:放松', '自定义阶段名称（可选）。'],
+        ['#priority:1', '固定提醒卡片顺序（1-10，越小越靠前）。'],
         ['到点提醒', '按下方勾选的方式提醒（弹窗 / 全屏 / 声音）；刷新页面后计时状态自动恢复。']
     ]
 };
@@ -203,6 +207,7 @@ const EN = {
     'task.today': 'Today',
     'task.overdue': 'Overdue',
     'task.repeat': 'Recurring',
+    'task.priority': 'Fixed sort (1-10, lower first)',
 
     'project.open': 'Open project',
     'project.cycling': 'Cycling',
@@ -318,22 +323,25 @@ const EN = {
         ['#2026-08-27', 'Due date: due today goes to "Today", future dates to "Future Tasks".'],
         ['#repeat:1w', 'Repeat weekly (1d/1w/1m/1y). Always pair with a #date as the starting point; advances and logs history on completion.'],
         ['#repeat:1m:start', 'Repeat on the 1st; :end last day; :endwork last workday of month (no #date needed).'],
-        ['#repeat:1d:actual', 'Advance from the actual completion date - after a gap, the next plan starts from the day you actually completed it.']
+        ['#repeat:1d:actual', 'Advance from the actual completion date - after a gap, the next plan starts from the day you actually completed it.'],
+        ['#priority:1', 'Fixed sort within the same date (1-10, lower first; default order if omitted). Works for tasks, check-ins and timers.']
     ],
     'help.projects': [
         ['state=In-Progress', 'Shown under "In-Progress Projects".'],
         ['state=On-Hold', 'Shown under "On Hold".'],
         ['state=Cycling-Phase', 'Shown under "Cycling Projects".'],
-        ['#priority=P1', 'Project sort priority (P1 highest, then P2, P3).']
+        ['#priority=P1', 'Project sort priority (P1 highest, then P2, P3). A note attribute - distinct from the in-task #priority:1 tag.']
     ],
     'help.dk': [
         ['#habit:5', 'Target 5 days per week, max 1 per day.'],
         ['#habit:4:2', 'Target 4 days per week, max 2 per day. A day only counts when fully checked in; progress is counted in days.'],
+        ['#priority:1', 'Pin check-in card order (1-10, lower first) - order stays stable after check-ins.'],
         ['Click a day', 'Check-in records are written below the task automatically.']
     ],
     'help.tx': [
         ['#timer:50:10', 'Work 50 min, rest 10 min.'],
         ['#timer:25:5:focus:break', 'Custom phase labels (optional).'],
+        ['#priority:1', 'Pin timer card order (1-10, lower first).'],
         ['Reminder', 'Notified via the methods checked below (toast / fullscreen / sound); timer state survives refresh.']
     ]
 };

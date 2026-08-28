@@ -118,11 +118,12 @@ export function getTaskState(input) {
 }
 
 // 解析笔记内容，返回未完成任务的数组
-// 返回项: { text, displayText, checkboxIndex, date, repeat, repeatStamp, dkDays, dkPerDay, dkTarget, dkRecords }
+// 返回项: { text, displayText, checkboxIndex, date, repeat, repeatStamp, dkDays, dkPerDay, dkTarget, dkRecords, priority, tx }
 // 打卡目标: #habit:N 或 #habit:N:M → dkDays=N, dkPerDay=M(缺省1), dkTarget=N（每周目标天数，按天计进度）
 // 重复任务: #repeat:Nd/Nw/Nm/Ny（每N天/周/月/年），可选后缀 :actual(按实际完成日) / :start(每月初) / :end(每月底) / :endwork(每月末工作日)
 // 位置型重复（:start/:end/:endwork）可省略 #日期：date 自动取当前周期计划日期，repeatStamp 标记待补写
-// 标签固定：#habit 打卡 / #timer 提醒 / #repeat 重复（不支持自定义别名与多标签）
+// 固定排序: #priority:N 或 #priorityN（也支持 #p:N / #pN），N=1~10，越小越靠前，任务/打卡/提醒通用
+// 标签固定：#habit 打卡 / #timer 提醒 / #repeat 重复 / #priority 排序（不支持自定义别名与多标签）
 // tags: { defaultRest: 5 } —— #timer:N 缺省休息分钟
 // features: 功能开关。dk/tx 关闭时不识别对应标签（省正则匹配 + 打卡记录 DOM 遍历）；
 //           展示文本仍会清理标记（避免 #habit:7 这类标签裸露显示）
@@ -172,6 +173,9 @@ export function parseTasks(content, today, tags, features) {
         // 注意 endwork 必须排在 end 前面，否则 :endwork 会被误匹配为 :end
         const repeat = text.match(/#repeat:(\d+)([dwmy])(?::(actual|start|endwork|end))?/i);
         const repeatPos = repeat && repeat[3] ? repeat[3].toLowerCase() : null;
+        // 提取固定排序优先级 #priority:N / #priorityN / #p:N / #pN（N=1~10，越小越靠前；任务/打卡/提醒通用）
+        // 注意：与项目笔记属性 #priority=P1/P2/P3 不同，这里是任务文本内的标签
+        const priority = text.match(/#(?:priority|p)\s*[:：]?\s*(10|[1-9])\b/i);
 
         // 位置型重复任务（每月初/底/末工作日）可省略 #日期：自动取当前周期计划日期并标记待补写
         let date = m ? m[1] : null;
@@ -187,6 +191,7 @@ export function parseTasks(content, today, tags, features) {
             .replace(dkCleanRe, '')
             .replace(txCleanRe, '')
             .replace(/#repeat:\d+[dwmy](?::(?:actual|start|endwork|end))?/gi, '')
+            .replace(/#(?:priority|p)\s*[:：]?\s*(10|[1-9])\b/gi, '')
             .replace(/\s+/g, ' ')
             .trim();
 
@@ -244,6 +249,8 @@ export function parseTasks(content, today, tags, features) {
             dkPerDay,
             dkTarget: dkDays != null ? dkDays : null,
             dkRecords,
+            // 固定排序优先级 #priority:N / #priorityN（1~10，越小越靠前；null=不参与优先级排序）
+            priority: priority ? parseInt(priority[1], 10) : null,
             // 间隔计时提醒 #timer:N:M:A:B → { work, rest, workLabel, restLabel }（N/M=分钟，A/B=阶段文本，均可省）
             tx: tx ? {
                 work: parseInt(tx[1], 10),

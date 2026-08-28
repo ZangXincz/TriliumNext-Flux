@@ -109,7 +109,12 @@ function TaskRow({ t, isDueGroup, today, leaving, onOpen, onComplete }) {
                 <span class="th-repeat-badge" title={_t('task.repeat')}><RepeatIcon />{repeatLabel(t.repeat)}</span>
             )}
             {t.fromProject && <span class="th-project-tag">{t.fromProject}</span>}
-            {dateTag}
+            {(t.priority != null || dateTag) && (
+                <span class="th-task-meta">
+                    {t.priority != null && <span class="th-task-date" title={_t('task.priority')}>{t.priority}</span>}
+                    {dateTag}
+                </span>
+            )}
         </div>
     );
 }

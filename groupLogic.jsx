@@ -28,6 +28,20 @@ export function byDate(a, b) {
     return (a.date || '9999-99-99').localeCompare(b.date || '9999-99-99');
 }
 
+// 固定排序优先级权重：#priority:N（1~10，越小越靠前），null/越界一律视为 99（排最后）
+export function priorityRankN(v) {
+    const n = typeof v === 'number' ? v : parseInt(v, 10);
+    return (n >= 1 && n <= 10) ? n : 99;
+}
+
+// 任务/打卡/提醒统一排序：先按日期升序（无日期排最后），
+// 同日期再按固定优先级 #priority:N 升序（1 最前，无优先级排最后）；
+// JS sort 稳定 → 其余保持原顺序
+export function byTaskOrder(a, b) {
+    return byDate(a, b)
+        || priorityRankN(a.priority) - priorityRankN(b.priority);
+}
+
 // 对已解析的笔记列表做分组归类
 // notes: [{ noteId, title, state, priority, isInbox, tasks, done, total }]
 // today: 本地日期 YYYY-MM-DD
@@ -124,9 +138,13 @@ export function classifyNotes(notes, today, features) {
     projects.sort(byPriority);
     onHoldProjects.sort(byPriority);
     cyclingProjects.sort(byPriority);
-    overdue.sort(byDate);
-    todayTasks.sort(byDate);
-    futureTasks.sort(byDate);
+    // 任务/打卡/提醒统一排序：日期优先，同日期按固定优先级 #priority:N（1~10，越小越靠前）
+    overdue.sort(byTaskOrder);
+    todayTasks.sort(byTaskOrder);
+    futureTasks.sort(byTaskOrder);
+    inboxTasks.sort(byTaskOrder);
+    dkTasks.sort(byTaskOrder);
+    txTasks.sort(byTaskOrder);
 
     const group1 = overdue.concat(todayTasks);
     const totalTasks = group1.length + inboxTasks.length + futureTasks.length + dkTasks.length + txTasks.length;

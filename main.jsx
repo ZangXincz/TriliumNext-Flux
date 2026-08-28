@@ -27,9 +27,10 @@ const { beep, freshState } = txLogic;
 const { injectStyles } = styles;
 const { PanelView, LoadingBox, EmptyState, ErrorBox, SettingsModal, setI18n } = panelView;
 const { createI18n } = i18n;
+const { initTagQuickInsert, destroyTagQuickInsert } = tagQuickInsert;
 
 // ── 插件元信息 ──
-const PLUGIN_VERSION = '1.0.0';
+const PLUGIN_VERSION = '1.1.0';
 const PLUGIN_REPO = 'https://github.com/ZangXincz/TriliumNext-Flux'; // TODO: 发布前替换为真实仓库地址
 
 // ── 默认配置（与配置笔记模板保持一致）──
@@ -49,8 +50,8 @@ const DEFAULT_CONFIG = {
     },
     inbox: { titles: ['inbox', '收集箱'] },
     projectRoot: { titles: [] }, // 留空 = 全树带 state 的笔记都算项目
-    dk: { tags: ['dk', 'checkin', 'habit'] },
-    tx: { tags: ['tx', 'timer', 'pomodoro'], defaultRest: 5, notifyMethods: ['message', 'sound'] }
+    tx: { defaultRest: 5, notifyMethods: ['message', 'sound'] }, // 提醒默认休息分钟与提醒方式
+    tqi: { enabled: true, candidates: null } // v5.0+ 候选池内置，candidates 字段已忽略（保留仅为向后兼容）
 };
 
 // 深合并：extra 只覆盖 base 中出现的键，数组/原始值直接替换
@@ -160,13 +161,23 @@ export default function TriliumNextFlux() {
     const [leavingKeys, setLeavingKeys] = useState(() => new Set());  // 任务行淡出中
     const [workingKeys, setWorkingKeys] = useState(() => new Map());  // 打卡格切换中 (key -> {dateStr})
 
-    // ── 间隔计时提醒（#tx:N:M）状态 ──
+    // ── 间隔计时提醒（#timer:N:M）状态 ──
     const [txStates, setTxStates] = useState({});   // key「noteId:cbIndex」→ { phase, endTime, totalMs }
     const [now, setNow] = useState(() => Date.now()); // 每秒刷新，驱动倒计时显示
     const txRef = useRef({});                        // txStates 实时副本（tick 内读取）
     const groupsRef = useRef(null);                  // groups 实时副本（提醒文案用）
 
-    useEffect(() => { injectStyles(); }, []);
+    useEffect(() => {
+        injectStyles();
+    }, []);
+
+    // ── 标签快速插入（# 快速输入）：Flux 挂载时注册全局监听器；配置变化时刷新候选池/i18n ──
+    useEffect(() => {
+        if (config.tqi && config.tqi.enabled === false) return;
+        initTagQuickInsert({ t: tRef.current, config: configRef.current });
+        return () => destroyTagQuickInsert();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [config]);
 
     async function load() {
         if (busyRef.current) { pendingRef.current = true; return; }
@@ -181,10 +192,8 @@ export default function TriliumNextFlux() {
             }, cfg.features);
             // 兼容旧格式（后端缓存未刷新时可能直接返回数组）
             const data = Array.isArray(res) ? res : (res.notes || []);
-            // 前端: 解析每个笔记的任务 + 勾选统计（打卡/提醒支持配置的标签别名）
+            // 前端: 解析每个笔记的任务 + 勾选统计（打卡 #habit / 提醒 #timer 固定标签）
             const tags = {
-                dk: (cfg.dk && cfg.dk.tags) || ['dk'],
-                tx: (cfg.tx && cfg.tx.tags) || ['tx'],
                 defaultRest: (cfg.tx && cfg.tx.defaultRest) || 5
             };
             const notes = data.map(note => {
@@ -280,7 +289,7 @@ export default function TriliumNextFlux() {
         setWorkingKeys(prev => new Map(prev).set(key, { dateStr }));
         try {
             const cfg = configRef.current;
-            await toggleDkDay(t.noteId, t.checkboxIndex, dateStr, (cfg.dk && cfg.dk.tags) || ['dk'], cfg.lang);
+            await toggleDkDay(t.noteId, t.checkboxIndex, dateStr, ['habit'], cfg.lang); // 打卡标签固定 #habit
             await load();
         } catch (e) {
             console.error(e);
@@ -289,7 +298,7 @@ export default function TriliumNextFlux() {
         }
     }
 
-    // ── 间隔计时提醒（#tx:N:M）核心逻辑 ────────────────────────
+    // ── 间隔计时提醒（#timer:N:M）核心逻辑 ────────────────────────
 
     const txKey = t => `${t.noteId}:${t.checkboxIndex}`;
     const txWorkMs = t => (t.tx.work || 1) * 60000;

@@ -129,7 +129,7 @@ function ProjectRow({ p, cycling, onHold, onOpen }) {
 
 // 打卡卡片（一周 7 日窗口）
 // working: { dateStr } | null —— 当前正在切换的日期格子（禁用防重复）
-// 每天多次打卡（#dk:N:M，dkPerDay > 1）时格子显示进度条：
+// 每天多次打卡（#habit:N:M，dkPerDay > 1）时格子显示进度条：
 //   点击 +1，满格（count >= dkPerDay）后再次点击清零
 function DkCard({ t, today, weekKey, weekDaysArr, working, onOpen, onToggleDay }) {
     const cur = t.dkRecords.find(r => `${r.weekStart}~${r.weekEnd}` === weekKey);
@@ -204,7 +204,7 @@ function fmtTxTime(ms) {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-// 间隔计时提醒阶段文本（可被 #tx 第 3/4 参数自定义）
+// 间隔计时提醒阶段文本（可被 #timer 第 3/4 参数自定义）
 function txPhaseLabel(phase, tx) {
     const wl = tx && tx.workLabel, rl = tx && tx.restLabel;
     if (phase === 'work') return wl || _t('tx.work');
@@ -213,7 +213,7 @@ function txPhaseLabel(phase, tx) {
     return _t('tx.idle');
 }
 
-// 间隔计时提醒卡片（#tx:N:M）
+// 间隔计时提醒卡片（#timer:N:M）
 // state: { phase: 'idle'|'work'|'restWait'|'rest', endTime, totalMs }（由 main.jsx 统一管理）
 // now: 当前时间戳（main.jsx 每秒刷新，驱动倒计时）
 function TxCard({ t, state, now, onStart, onRest, onReset, onOpen }) {
@@ -457,6 +457,8 @@ function GeneralTab({ t, draft, onPatch, version, repo }) {
             </div>
             <Toggle label={t('set.enabled')} desc={t('set.enabledDesc')}
                     checked={draft.enabled} onChange={v => onPatch('enabled', v)} />
+            <Toggle label={t('set.fTqi')} desc={t('set.fTqiDesc')}
+                    checked={draft.tqi.enabled} onChange={v => onPatch('tqi.enabled', v)} />
             <div class="th-set-row">
                 <div class="th-set-info"><span class="th-set-label">{t('set.version')}</span></div>
                 <span class="th-set-desc">{version}</span>
@@ -515,39 +517,23 @@ function ProjectsTab({ t, draft, onPatch }) {
     );
 }
 
-// 打卡：开关 + 标签别名
+// 打卡：开关（标签固定 #habit，v6 起不再支持自定义）
 function DkTab({ t, draft, onPatch }) {
     return (
         <div>
             <Toggle label={t('set.fDk')} desc={t('set.fDkDesc')}
                     checked={draft.features.dk} onChange={v => onPatch('features.dk', v)} />
-            <div class="th-set-row">
-                <div class="th-set-info">
-                    <span class="th-set-label">{t('set.dkTags')}</span>
-                    <span class="th-set-desc">{t('set.dkTagsDesc')}</span>
-                </div>
-                <TagsInput value={draft.dk.tags} placeholder="dk, checkin, habit"
-                           onChange={v => onPatch('dk.tags', v)} />
-            </div>
             <HelpBox items={t('help.dk')} t={t} />
         </div>
     );
 }
 
-// 提醒：开关 + 标签别名 + 默认休息分钟
+// 提醒：开关 + 默认休息分钟（标签固定 #timer，v6 起不再支持自定义）
 function TxTab({ t, draft, onPatch }) {
     return (
         <div>
             <Toggle label={t('set.fTx')} desc={t('set.fTxDesc')}
                     checked={draft.features.tx} onChange={v => onPatch('features.tx', v)} />
-            <div class="th-set-row">
-                <div class="th-set-info">
-                    <span class="th-set-label">{t('set.txTags')}</span>
-                    <span class="th-set-desc">{t('set.txTagsDesc')}</span>
-                </div>
-                <TagsInput value={draft.tx.tags} placeholder="tx, timer, pomodoro"
-                           onChange={v => onPatch('tx.tags', v)} />
-            </div>
             <div class="th-set-row">
                 <div class="th-set-info">
                     <span class="th-set-label">{t('set.txRest')}</span>

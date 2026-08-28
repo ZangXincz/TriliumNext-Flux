@@ -534,7 +534,7 @@ export async function stampRepeatDate(noteId, cbIndex, dateStr) {
 }
 
 // ── 打卡切换：在任务 li 下方重建本周打卡子记录 ──
-// dkTags: 打卡标签别名列表（如 ['dk','checkin','habit']），任一标签都识别为打卡
+// dkTags: 打卡标签（固定 ['habit']）
 export async function toggleDkDay(noteId, cbIndex, dateStr, dkTags, lang) {
     return runOnBackend((noteId, cbIndex, dateStr, dkTags, lang) => {
 
@@ -671,12 +671,12 @@ export async function toggleDkDay(noteId, cbIndex, dateStr, dkTags, lang) {
         // 进行中的记录（已完成 done / 已取消 cancelled 不参与周进度，与任务取消逻辑一致）
         const recs = recItems.filter(r => r.state !== 'done' && r.state !== 'cancelled');
 
-        // 5) 目标（从任务文本部分提取 #dk:N 或 #dk:N:M；支持标签别名，如 #checkin）
+        // 5) 目标（从任务文本部分提取 #habit:N 或 #habit:N:M）
         //    N=每周目标天数, M=每天打卡次数（缺省 1）；周目标总次数 = N × M
         const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const dkTagList = (dkTags && dkTags.length > 0) ? dkTags : ['dk'];
-        // 别名列表必须用非捕获组 (?:...) 整体包裹，否则多别名时正则变成
-        // "#dk|checkin|habit:(\d+)"，'checkin' 分支会匹配任意 "checkin" 文本，
+        const dkTagList = (dkTags && dkTags.length > 0) ? dkTags : ['habit'];
+        // 标签列表必须用非捕获组 (?:...) 整体包裹，否则多标签时正则变成
+        // "#habit|timer:(\d+)"，'timer' 分支会匹配任意 "timer" 文本，
         // 捕获组为空 → parseInt(undefined) = NaN → 记录里出现 "周进度1/NaN"
         const dkTagRe = new RegExp('#(?:' + dkTagList.map(escRe).join('|') + '):(\\d+)(?::(\\d+))?', 'i');
         function parseTarget(taskLi) {

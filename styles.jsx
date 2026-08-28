@@ -241,7 +241,7 @@ export const TASK_STYLES = `
         transition: all .15s;
         box-shadow: inset 0 0 0 1px var(--main-border-color, #313244);
     }
-    /* 每天多次打卡（#dk:N:M）：当前格子渲染与单次打卡完全一致（仅多一层内联渐变进度背景），
+    /* 每天多次打卡（#habit:N:M）：当前格子渲染与单次打卡完全一致（仅多一层内联渐变进度背景），
        不设额外布局规则，高度统一 18px；将来若在格子里竖排 星期+进度条+次数 再恢复布局 */
     .th-dk-day.partial {
         box-shadow: inset 0 0 0 1px rgba(166, 227, 161, .4);
@@ -296,7 +296,7 @@ export const TASK_STYLES = `
         font-variant-numeric: tabular-nums;
     }
 
-    /* ── 间隔计时提醒（#tx:N:M） ── */
+    /* ── 间隔计时提醒（#timer:N:M） ── */
     .th-tx-card {
         border: 1px solid var(--main-border-color, #313244);
         border-radius: 10px;

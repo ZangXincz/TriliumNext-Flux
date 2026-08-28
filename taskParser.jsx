@@ -119,17 +119,18 @@ export function getTaskState(input) {
 
 // 解析笔记内容，返回未完成任务的数组
 // 返回项: { text, displayText, checkboxIndex, date, repeat, repeatStamp, dkDays, dkPerDay, dkTarget, dkRecords }
-// 打卡目标: #dk:N 或 #dk:N:M → dkDays=N, dkPerDay=M(缺省1), dkTarget=N（每周目标天数，按天计进度）
+// 打卡目标: #habit:N 或 #habit:N:M → dkDays=N, dkPerDay=M(缺省1), dkTarget=N（每周目标天数，按天计进度）
 // 重复任务: #repeat:Nd/Nw/Nm/Ny（每N天/周/月/年），可选后缀 :actual(按实际完成日) / :start(每月初) / :end(每月底) / :endwork(每月末工作日)
 // 位置型重复（:start/:end/:endwork）可省略 #日期：date 自动取当前周期计划日期，repeatStamp 标记待补写
-// tags: { dk: [..], tx: [..], defaultRest: 5 } —— 打卡/提醒标签别名列表（默认 ['dk'] / ['tx']），defaultRest 为 #tx 缺省休息分钟
+// 标签固定：#habit 打卡 / #timer 提醒 / #repeat 重复（不支持自定义别名与多标签）
+// tags: { defaultRest: 5 } —— #timer:N 缺省休息分钟
 // features: 功能开关。dk/tx 关闭时不识别对应标签（省正则匹配 + 打卡记录 DOM 遍历）；
-//           展示文本仍会清理标记（避免 #dk:7 这类标签裸露显示）
+//           展示文本仍会清理标记（避免 #habit:7 这类标签裸露显示）
 export function parseTasks(content, today, tags, features) {
     const dkEnabled = !features || features.dk !== false;
     const txEnabled = !features || features.tx !== false;
-    const dkAliases = (tags && tags.dk && tags.dk.length > 0) ? tags.dk : ['dk'];
-    const txAliases = (tags && tags.tx && tags.tx.length > 0) ? tags.tx : ['tx'];
+    const dkAliases = ['habit'];       // 固定标签：打卡
+    const txAliases = ['timer'];       // 固定标签：间隔提醒
     const txDefaultRest = (tags && tags.defaultRest != null) ? tags.defaultRest : 5;
     const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     // 功能关闭时用永不匹配的正则（/(?!)/），完全跳过对应标签识别
@@ -163,9 +164,9 @@ export function parseTasks(content, today, tags, features) {
 
         // 提取日期 #YYYY-MM-DD
         const m = text.match(/#(\d{4}-\d{2}-\d{2})/);
-        // 提取打卡目标 #dk:N 或 #dk:N:M（N=每周目标天数，M=每天打卡次数，缺省 1；支持配置的标签别名）
+        // 提取打卡目标 #habit:N 或 #habit:N:M（N=每周目标天数，M=每天打卡次数，缺省 1）
         const dk = text.match(dkRe);
-        // 提取间隔计时提醒 #tx:N:M:A:B（N=进行分钟，M=休息分钟，A=进行中文本，B=休息中文本，均可省略；支持配置的标签别名）
+        // 提取间隔计时提醒 #timer:N:M:A:B（N=进行分钟，M=休息分钟，A=进行中文本，B=休息中文本，均可省略）
         const tx = text.match(txRe);
         // 提取重复规则 #repeat:Nd/Nw/Nm/Ny，可选后缀 :actual/:start/:endwork/:end
         // 注意 endwork 必须排在 end 前面，否则 :endwork 会被误匹配为 :end
@@ -243,7 +244,7 @@ export function parseTasks(content, today, tags, features) {
             dkPerDay,
             dkTarget: dkDays != null ? dkDays : null,
             dkRecords,
-            // 间隔计时提醒 #tx:N:M:A:B → { work, rest, workLabel, restLabel }（N/M=分钟，A/B=阶段文本，均可省）
+            // 间隔计时提醒 #timer:N:M:A:B → { work, rest, workLabel, restLabel }（N/M=分钟，A/B=阶段文本，均可省）
             tx: tx ? {
                 work: parseInt(tx[1], 10),
                 rest: tx[2] ? parseInt(tx[2], 10) : txDefaultRest,

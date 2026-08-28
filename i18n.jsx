@@ -80,6 +80,12 @@ const ZH = {
     'tx.notifyWorkRestMin': '⏰ 时间到，休息 {n} 分钟',
     'tx.dismiss': '知道了',
 
+    // ── 标签快速插入（# 快速输入）──
+    'tqi.nav': '选择',
+    'tqi.insert': '插入',
+    'tqi.close': '关闭',
+    'tqi.empty': '无匹配词条',
+
     // ── 设置弹窗 ──
     'settings.title': '设置',
     'settings.save': '保存',
@@ -103,6 +109,8 @@ const ZH = {
     'set.langEn': 'English',
     'set.enabled': '是否启用',
     'set.enabledDesc': '关闭后面板停止展示任务',
+    'set.fTqi': '# 快速录入',
+    'set.fTqiDesc': '输入 # 时弹出日期、重复、习惯、计时候选',
     'set.version': '版本',
     'set.repo': 'GitHub 仓库',
     'set.openRepo': '打开',
@@ -128,19 +136,15 @@ const ZH = {
     'set.projectRootDesc': '逗号分隔。面板只扫描这些目录下的内容，留空则扫描全部笔记',
     'set.projectRootPlaceholder': '留空 = 全局获取，例如 Projects',
 
-    // 打卡
+    // 打卡（标签固定 #habit）
     'set.fDk': '打卡功能',
-    'set.fDkDesc': '显示打卡卡片（#dk 等标签）',
-    'set.dkTags': '打卡标签',
-    'set.dkTagsDesc': '逗号分隔。任一标签都识别为打卡任务',
+    'set.fDkDesc': '显示打卡卡片（#habit 标签）',
 
-    // 提醒
+    // 提醒（标签固定 #timer）
     'set.fTx': '提醒功能',
-    'set.fTxDesc': '显示间隔计时提醒卡片（#tx 等标签）',
-    'set.txTags': '提醒标签',
-    'set.txTagsDesc': '逗号分隔。任一标签都识别为计时提醒任务',
+    'set.fTxDesc': '显示间隔计时提醒卡片（#timer 标签）',
     'set.txRest': '默认休息分钟',
-    'set.txRestDesc': '#tx:N 未写休息分钟时的缺省值',
+    'set.txRestDesc': '#timer:N 未写休息分钟时的缺省值',
     'set.txNotify': '提醒方式',
     'set.txNotifyDesc': '到点时通过勾选的方式提醒你',
     'set.txNotifyMessage': '弹窗提示',
@@ -166,14 +170,13 @@ const ZH = {
         ['#priority=P1', '项目排序优先级（P1 最高，P2、P3 依次）。']
     ],
     'help.dk': [
-        ['#checkin:5', '每周目标 5 天，每天最多 1 次。'],
-        ['#checkin:4:2', '每周目标 4 天，每天最多 2 次；当天全部打满才算 1 天，总进度按天数计。'],
-        ['#dk / #habit', '默认也识别为打卡（可在下方「打卡标签」自定义）。'],
+        ['#habit:5', '每周目标 5 天，每天最多 1 次。'],
+        ['#habit:4:2', '每周目标 4 天，每天最多 2 次；当天全部打满才算 1 天，总进度按天数计。'],
         ['点击格子', '打卡记录自动写入任务下方子列表。']
     ],
     'help.tx': [
-        ['#tx:50:10', '进行 50 分钟，休息 10 分钟。'],
-        ['#tx:25:5:专注:放松', '自定义阶段名称（可选）。'],
+        ['#timer:50:10', '进行 50 分钟，休息 10 分钟。'],
+        ['#timer:25:5:专注:放松', '自定义阶段名称（可选）。'],
         ['到点提醒', '按下方勾选的方式提醒（弹窗 / 全屏 / 声音）；刷新页面后计时状态自动恢复。']
     ]
 };
@@ -242,6 +245,11 @@ const EN = {
     'tx.notifyWorkRestMin': '⏰ Time is up, rest {n} min',
     'tx.dismiss': 'Got it',
 
+    'tqi.nav': 'select',
+    'tqi.insert': 'insert',
+    'tqi.close': 'close',
+    'tqi.empty': 'No matching item',
+
     'settings.title': 'Settings',
     'settings.save': 'Save',
     'settings.cancel': 'Cancel',
@@ -263,6 +271,8 @@ const EN = {
     'set.langEn': 'English',
     'set.enabled': 'Enable plugin',
     'set.enabledDesc': 'Hide the panel when disabled',
+    'set.fTqi': 'Quick insert',
+    'set.fTqiDesc': 'Show date/repeat/habit/timer candidates while typing #',
     'set.version': 'Version',
     'set.repo': 'GitHub repository',
     'set.openRepo': 'Open',
@@ -287,16 +297,12 @@ const EN = {
     'set.projectRootPlaceholder': 'Empty = all notes, e.g. Projects',
 
     'set.fDk': 'Check-in',
-    'set.fDkDesc': 'Show check-in cards (#dk tags)',
-    'set.dkTags': 'Check-in tags',
-    'set.dkTagsDesc': 'Comma-separated. Any of these tags counts as a check-in task',
+    'set.fDkDesc': 'Show check-in cards (#habit tag)',
 
     'set.fTx': 'Timer',
-    'set.fTxDesc': 'Show interval timer cards (#tx tags)',
-    'set.txTags': 'Timer tags',
-    'set.txTagsDesc': 'Comma-separated. Any of these tags counts as a timer task',
+    'set.fTxDesc': 'Show interval timer cards (#timer tag)',
     'set.txRest': 'Default rest minutes',
-    'set.txRestDesc': 'Used when #tx has no rest value',
+    'set.txRestDesc': 'Used when #timer has no rest value',
     'set.txNotify': 'Notify methods',
     'set.txNotifyDesc': 'How you are notified when a timer ends',
     'set.txNotifyMessage': 'Toast message',
@@ -321,14 +327,13 @@ const EN = {
         ['#priority=P1', 'Project sort priority (P1 highest, then P2, P3).']
     ],
     'help.dk': [
-        ['#checkin:5', 'Target 5 days per week, max 1 per day.'],
-        ['#checkin:4:2', 'Target 4 days per week, max 2 per day. A day only counts when fully checked in; progress is counted in days.'],
-        ['#dk / #habit', 'Also recognized by default (customize below).'],
+        ['#habit:5', 'Target 5 days per week, max 1 per day.'],
+        ['#habit:4:2', 'Target 4 days per week, max 2 per day. A day only counts when fully checked in; progress is counted in days.'],
         ['Click a day', 'Check-in records are written below the task automatically.']
     ],
     'help.tx': [
-        ['#tx:50:10', 'Work 50 min, rest 10 min.'],
-        ['#tx:25:5:focus:break', 'Custom phase labels (optional).'],
+        ['#timer:50:10', 'Work 50 min, rest 10 min.'],
+        ['#timer:25:5:focus:break', 'Custom phase labels (optional).'],
         ['Reminder', 'Notified via the methods checked below (toast / fullscreen / sound); timer state survives refresh.']
     ]
 };

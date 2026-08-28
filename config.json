@@ -18,11 +18,10 @@
 	"projectRoot": {
 		"titles": []
 	},
-	"dk": {
-		"tags": ["dk", "checkin", "habit"]
-	},
 	"tx": {
-		"tags": ["tx", "timer", "pomodoro"],
 		"defaultRest": 5
+	},
+	"tqi": {
+		"enabled": true
 	}
 }

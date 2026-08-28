@@ -1,5 +1,5 @@
 // ============================================================
-//  txLogic — 间隔计时提醒（#tx:N:M）纯逻辑 + 声音
+//  txLogic — 间隔计时提醒（#timer:N:M）纯逻辑 + 声音
 //  无后端依赖、无模块级状态；计时状态由 main.jsx 统一管理，
 //  通过 backendBridge.saveTxState 持久化到配置笔记 txState 字段。
 //  作为 render bundle 的子模块，入口用标题「txLogic」引用：

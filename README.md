@@ -21,7 +21,7 @@ TriliumNext Flux is a Render plugin that runs in [TriliumNext](https://github.co
 | Data ownership | Everything is stored in Trilium notes — no external storage, no third-party services |
 | Zero dependencies | Pure frontend implementation, no third-party libraries |
 | Bilingual | One-click language switch (Chinese / English) |
-| Flexible config | Each feature can be toggled, tag syntax is customizable |
+| Flexible config | Each feature can be toggled; fixed tags with built-in # quick insert |
 | Lightweight | Auto-refresh every 30 seconds without extra overhead |
 
 ## Preview
@@ -69,8 +69,8 @@ The panel is divided into several groups from top to bottom (each can be toggled
 | Cycling-Phase Projects | Project cards with `state=Cycling-Phase` |
 | Inbox | Tasks inside inbox notes and their subtrees |
 | Future Tasks | Tasks marked with a future date |
-| Check-in | Check-in cards with `#checkin` / `#dk` / `#habit` tags |
-| Interval Timer Reminder | Timer cards with `#tx` / `#timer` / `#pomodoro` tags |
+| Check-in | Check-in cards with `#habit` tags |
+| Interval Timer Reminder | Timer cards with `#timer` tags |
 
 The panel auto-refreshes every 30 seconds; you can also trigger a manual refresh.
 
@@ -116,7 +116,7 @@ Use the `#repeat` tag to advance a task on a fixed cycle — great for daily / w
 - [ ] Annual physical #2026-08-27 #repeat:1y
 ```
 
-Syntax: `#repeat:<interval><unit>`, where interval is a positive integer and unit is `d` (days) / `w` (weeks) / `m` (months) / `y` (years).
+Syntax: `#repeat:<interval><unit>`, where interval is a positive integer and unit is `d` (days) / `w` (weeks) / `m` (months) / `y` (years). The tag is fixed to `#repeat` (no customization).
 
 **Rules**:
 
@@ -178,15 +178,15 @@ Great for jotting down ideas and loose to-dos that you haven't decided where to 
 For long-term habits like "complete N days per week". Write it in the task text:
 
 ```markdown
-- [ ] Early rising #checkin:5
-- [ ] Running #checkin:4:2
+- [ ] Early rising #habit:5
+- [ ] Running #habit:4:2
 ```
 
-Syntax: `#checkin:<weekly target days>`, optionally `:<max times per day>`.
+Syntax: `#habit:<weekly target days>`, optionally `:<max times per day>`.
 
-- `#checkin:5`: weekly target of **5 days**, at most **1 check-in per day**.
-- `#checkin:4:2`: weekly target of **4 days**, at most **2 per day**. Filling 2 times in one day counts as completing that day; weekly progress is counted in **days** (not times).
-- By default `#dk` / `#habit` are also recognized; you can customize the tag list in settings.
+- `#habit:5`: weekly target of **5 days**, at most **1 check-in per day**.
+- `#habit:4:2`: weekly target of **4 days**, at most **2 per day**. Filling 2 times in one day counts as completing that day; weekly progress is counted in **days** (not times).
+- The tag is fixed to `#habit` (no customization).
 
 **How to use**:
 
@@ -202,16 +202,16 @@ Syntax: `#checkin:<weekly target days>`, optionally `:<max times per day>`.
 For Pomodoro and work/rest rhythm management. Write it in the task text:
 
 ```markdown
-- [ ] Deep work #tx:50:10
-- [ ] Thesis writing #tx:25:5:Focus:Break
-- [ ] Meditation #tx:30
+- [ ] Deep work #timer:50:10
+- [ ] Thesis writing #timer:25:5:Focus:Break
+- [ ] Meditation #timer:30
 ```
 
-Syntax: `#tx:<work minutes>:<rest minutes>:<work phase name>:<rest phase name>` — the last two custom phase names are optional.
+Syntax: `#timer:<work minutes>:<rest minutes>:<work phase name>:<rest phase name>` — the last two custom phase names are optional.
 
-- `#tx:50:10`: 50 minutes of work, 10 minutes of rest.
-- `#tx:25:5:Focus:Break`: phases shown as "Focus" and "Break".
-- `#tx:30`: only the work duration is given; the rest minutes use the default from settings (5 minutes by default).
+- `#timer:50:10`: 50 minutes of work, 10 minutes of rest.
+- `#timer:25:5:Focus:Break`: phases shown as "Focus" and "Break".
+- `#timer:30`: only the work duration is given; the rest minutes use the default from settings (5 minutes by default).
 
 **How to use**:
 
@@ -220,7 +220,16 @@ Syntax: `#tx:<work minutes>:<rest minutes>:<work phase name>:<rest phase name>` 
 - Click "Reset" to return to the idle state anytime.
 - Timer state is auto-persisted to the config note — **the countdown resumes after refreshing the page**, nothing is lost.
 
-By default `#tx` / `#timer` / `#pomodoro` are also recognized; you can customize the tag list in settings.
+The tag is fixed to `#timer` (no customization).
+
+### Quick insert (#)
+
+Type `#` in task text and a candidate menu pops up for fast tag completion — dates, repeat, check-in, timer (can be disabled in settings):
+
+- Type `#` → common candidates: today / tomorrow / more dates (type `next` to expand) / `#repeat` / `#habit` / `#timer`
+- Keep typing to filter in real time, e.g. `#repeat:2w`, `#habit:3`, `#timer:50`
+- `↑` `↓` to select, `Enter` or `Tab` to insert, or click directly
+- Can be turned off under Settings → General
 
 ### Settings
 
@@ -228,11 +237,11 @@ Click the **⚙️ Settings** gear in the top-right corner of the panel. There a
 
 | Tab | Options |
 |---|---|
-| General | Language (中文 / English), enable/disable plugin, version info, GitHub repo |
+| General | Language (中文 / English), enable/disable plugin, quick insert (#) toggle, version info, GitHub repo |
 | Tasks | Toggles: Overdue & Today / Future Tasks / Inbox; inbox titles (comma-separated) |
 | Projects | Toggles: In-Progress Projects / On Hold & Awaiting Response / Cycling-Phase Projects; project root (comma-separated, empty = scan all notes) |
-| Check-in | Check-in feature toggle; check-in tags (comma-separated, any match counts) |
-| Reminder | Reminder feature toggle; reminder tags; default rest minutes; notification methods (message / fullscreen / sound, multiple) |
+| Check-in | Check-in feature toggle (tag fixed to `#habit`) |
+| Reminder | Reminder feature toggle; default rest minutes; notification methods (message / fullscreen / sound, multiple) |
 
 **Before saving**: settings are written to the config note pointed to by the `~configNote` relation on the host note (`json` or `code` type). Before saving for the first time, make sure the relation has been added as described in "Installation" — otherwise you'll get a "Config note not found" warning.
 
@@ -259,7 +268,7 @@ Make sure backend script execution is enabled (Settings → Security) and the pl
 Timer state is stored in the `txState` field of the config note; without a config note it cannot be persisted (the timer still runs, it just resets on refresh).
 
 **Q4: What do the numbers on the check-in cells mean?**
-With `#checkin:4:2`, at most 2 per day. `1/2` on a cell means 1 of today's 2 check-ins done; once full the cell shows as completed and clicking again resets it.
+With `#habit:4:2`, at most 2 per day. `1/2` on a cell means 1 of today's 2 check-ins done; once full the cell shows as completed and clicking again resets it.
 
 **Q5: Why do repeating tasks gain extra history sub-tasks?**
 Those are completion records (with completion dates) auto-written by the plugin. Regular tasks without a repeat tag don't generate history — they're simply marked complete.

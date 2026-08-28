@@ -518,7 +518,7 @@ export default function TriliumNextFlux() {
         );
     }
 
-    // 根容器样式（与原 $root.css 一致）；右上角常驻设置齿轮
+    // 根容器样式（与原 $root.css 一致）；左下角常驻设置齿轮
     const tDraft = createI18n(draft ? draft.lang : config.lang); // 弹窗文案随草稿语言实时预览
     return (
         <div style="padding: 28px 32px; font-family: var(--detail-font-family, 'Segoe UI', sans-serif); font-size: 16px; line-height: 1.5; color: var(--main-text-color); box-sizing: border-box;">
